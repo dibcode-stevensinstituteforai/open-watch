@@ -2,7 +2,7 @@
 # OpenWatch - Git ignore rules
 # =============================================================================
 
-# --- Build directories (created by scripts/run.{sh,ps1}) --------------------
+# --- Build directories (created on first build; see README) ----------------
 build-windows/
 build-linux/
 build/

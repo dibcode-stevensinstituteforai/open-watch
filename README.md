@@ -47,12 +47,9 @@ Phase 1 produces the **CSV ground truth** (`x, y, width, height, time_in_seconds
 - [Architecture](#architecture)
 - [Supported platforms](#supported-platforms)
 - [Quick start](#quick-start)
-  - [The scripts at a glance](#the-scripts-at-a-glance)
-  - [What gets auto-installed (and what does not)](#what-gets-auto-installed-and-what-does-not)
-  - [Linux / WSL example session](#-linux--wsl-ubuntu-2404--example-session)
-  - [Windows 10 example session](#-windows-10-powershell--example-session)
-  - [Useful flags](#useful-flags)
-- [Manual build (no scripts)](#manual-build-no-scripts)
+  - [Linux / WSL Ubuntu 24.04 — manual build](#-linux--wsl-ubuntu-2404--manual-build)
+  - [Windows 10 (PowerShell) — script-driven build](#-windows-10-powershell--script-driven-build)
+- [Manual Windows build (without `run.ps1`)](#manual-windows-build-without-runps1)
 - [Test video location](#test-video-location)
 - [Running the tracker](#running-the-tracker)
 - [Output format](#output-format)
@@ -178,168 +175,184 @@ Stevens (academia) reflects exactly that cross-sector model.
 
 ## Quick start
 
-> **Before you start:**
-> 1. Confirm the MobileNet-SSD model files are present at
->    `models/MobileNetSSD_deploy.prototxt` and
->    `models/MobileNetSSD_deploy.caffemodel`. They are committed in the repo,
->    so a fresh `git clone` already has them. If yours doesn't, see
->    [`models/DOWNLOAD-INSTRUCTIONS.txt`](models/DOWNLOAD-INSTRUCTIONS.txt).
-> 2. Confirm a test video at `videos/video1.mp4` (inside the cloned repo).
->    This folder **and its contents are tracked by git**, so any reference
->    clip travels with the repo. See [Test video location](#test-video-location).
+> **Before you start, confirm two things are present in the repo (a fresh
+> `git clone` already has them):**
+> 1. The model files
+>    [`models/MobileNetSSD_deploy.prototxt`](models/) and
+>    [`models/MobileNetSSD_deploy.caffemodel`](models/) — both committed.
+>    If yours are missing, see [`models/DOWNLOAD-INSTRUCTIONS.txt`](models/DOWNLOAD-INSTRUCTIONS.txt).
+> 2. A test video at `videos/video1.mp4` — also committed
+>    (see [Test video location](#test-video-location)).
 
-### The scripts at a glance
+OpenWatch builds with **two completely separate toolchains**:
 
-OpenWatch ships **one entry-point script per OS**. The user runs **one
-command** and gets a working tracker:
+| OS | Compiler | Build system | Dependencies | Approach |
+|---|---|---|---|---|
+| **Linux / WSL Ubuntu 24.04** | `clang++` 18 (LLVM 18) | CMake + Ninja | Native apt packages (`libopencv-dev`, `libeigen3-dev`) | **Raw commands** — copy/paste 4 lines, no script |
+| **Windows 10** | MSVC v143 (Visual Studio 2022) | CMake + vcpkg | vcpkg-installed OpenCV + Eigen | **PowerShell helper script** that wires up vcpkg toolchain automatically |
 
-| OS | The one command you run | Where you run it |
-|---|---|---|
-| Linux / WSL Ubuntu 24.04 | `bash scripts/run.sh` | from the repo root, in a Bash shell |
-| Windows 10               | `powershell -ExecutionPolicy Bypass -File scripts\run.ps1` | from the repo root, in PowerShell |
+> **Why two different approaches?** On Linux, the build is one apt-install
+> away and the four CMake commands fit on one screen — there's no value in
+> wrapping them in a script. On Windows, the vcpkg toolchain integration
+> needs many flags that are easy to typo, so a script genuinely helps.
 
-`run.{sh,ps1}` does **everything end-to-end** in this order:
+---
 
-1. Runs the matching `doctor.{sh,ps1}` internally to inspect your toolchain.
-2. If anything is missing, **prompts you** before installing it.
-3. Creates the appropriate build folder (`build-linux/` or `build-windows/`).
-4. Configures CMake.
-5. Compiles.
-6. Launches the tracker.
+### 🐧 Linux / WSL Ubuntu 24.04 — manual build
 
-You **never** need to call `doctor` separately — it's optional and only
-useful if you want to inspect your environment before any build happens.
+#### Step 0 — Open a Bash shell at the repo root
 
-### What gets auto-installed (and what does not)
+If you're on **native Linux**, just `cd` into the repo:
 
-The rule of thumb is simple: **anything with a CLI installer is
-auto-installed; anything that needs a GUI installer is not.**
+```bash
+cd /path/to/open-watch
+```
 
-#### 🐧 On Linux / WSL Ubuntu 24.04 — fully hands-off
+If you're on **WSL Ubuntu inside Windows**, your repo lives on the Windows
+filesystem. Reach it through `/mnt/c/...`. Example:
 
-After you confirm the install prompt with `y`, `run.sh` runs:
+```bash
+cd "/mnt/c/Users/Zandor/Desktop/HOYYU/open-watch"
+```
+
+> Adjust the path to wherever you cloned the repo on your Windows side.
+
+#### Step 1 — Install the toolchain (one-time, on a fresh Ubuntu 24.04)
 
 ```bash
 sudo apt update
-sudo apt install -y clang-18 libc++-18-dev libc++abi-18-dev \
-                    cmake ninja-build pkg-config git build-essential \
-                    libopencv-dev libeigen3-dev
+sudo apt install -y clang-18 cmake ninja-build pkg-config \
+                    libopencv-dev libeigen3-dev build-essential
 ```
 
-That's the whole toolchain. Total time on a fresh Ubuntu 24.04: **2 - 5 minutes**.
+Total time: 2 - 5 minutes. Already installed? Skip this step.
 
-#### 🪟 On Windows 10 — three tools you install once, by hand
+To verify, the versions OpenWatch was developed against are:
 
-These need GUI installers and the script cannot do them for you. The
-doctor will report each as `MISSING` with a download link if needed:
+```
+Ubuntu 24.04.1 LTS, clang++ 18.1.3, cmake 3.28.x, ninja 1.11.x, OpenCV 4.6.0
+```
+
+#### Step 2 — Configure, build, run
+
+The first time, create the build folder. After that, you only need it once.
+
+```bash
+mkdir -p build-linux
+cd build-linux
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++
+cmake --build . --config Release
+./person_detector_linux
+```
+
+That's the whole pipeline. The `build-linux/` folder is gitignored on
+purpose — every contributor (and CI) creates their own.
+
+#### What you'll see
+
+- Live progress while Ninja compiles `tracker_linux.cpp` and the bytetrack `*.cpp` sources, then links into `person_detector_linux`.
+- Once running, the binary prints:
+  ```
+  Model loaded from: ../models/MobileNetSSD_deploy.prototxt
+  Video opened: ../videos/video1.mp4
+  Processed frame: 50
+  Processed frame: 100
+  ...
+  Done. Processed N frames. Check 'output/' folder.
+  ```
+- WSL is headless, so **no live window opens**. The binary instead writes:
+  - `build-linux/output/tracking_data.csv`
+  - `build-linux/output/track_frame_*.jpg` (frame snapshots with bounding boxes overlaid)
+
+To visually confirm the bounding boxes look right, open one of the JPGs from
+Windows Explorer (the files live on the Windows filesystem).
+
+#### Subsequent runs
+
+The first three commands set up `build-linux/`. After that, just rebuild +
+run:
+
+```bash
+cd build-linux
+cmake --build . --config Release
+./person_detector_linux
+```
+
+To wipe and start over:
+
+```bash
+rm -rf build-linux/*    # from the repo root, or `cd ..` first
+mkdir -p build-linux && cd build-linux
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++
+cmake --build . --config Release
+./person_detector_linux
+```
+
+---
+
+### 🪟 Windows 10 (PowerShell) — script-driven build
+
+#### Step 0 — One-time GUI installs
+
+These need GUI installers; the script can't do them for you:
 
 | Component | Where to get it |
 |---|---|
 | **Git for Windows** | [git-scm.com/download/win](https://git-scm.com/download/win) |
 | **CMake ≥ 3.20** (any 3.20+ works; verified with 4.3.x) | [cmake.org/download](https://cmake.org/download/) |
-| **Visual Studio 2022** with the **Desktop development with C++** workload (provides the **MSVC v143** compiler — the Windows build uses MSVC; clang/LLVM is **Linux-only** here) | [visualstudio.microsoft.com/downloads](https://visualstudio.microsoft.com/downloads/) |
+| **Visual Studio 2022** with the **Desktop development with C++** workload | [visualstudio.microsoft.com/downloads](https://visualstudio.microsoft.com/downloads/) |
 
-Once those three are installed, **everything else is auto-installed** by
-`run.ps1` after you confirm the prompt with `y`:
+> The Windows target compiles with **MSVC v143** (provided by VS 2022).
+> clang/LLVM is **Linux-only** in this project.
 
-- [vcpkg](https://github.com/microsoft/vcpkg) at `C:\vcpkg` (cloned + bootstrapped)
-- `opencv4[core,dnn,jpeg,png,ffmpeg]:x64-windows` via vcpkg (~15 - 30 min the first time)
-- `eigen3:x64-windows` via vcpkg (~1 min)
-
-### 🐧 Linux / WSL Ubuntu 24.04 — example session
-
-```bash
-git clone https://github.com/dibcode/open-watch.git
-cd open-watch
-
-# All-in-one: doctor -> (auto-install if needed) -> cmake -> build -> run
-bash scripts/run.sh
-```
-
-What you'll see:
-- Live progress lines while compiling (Ninja).
-- Frame-by-frame progress from the tracker (`Processed frame: 50` ...).
-- WSL is headless, so **no live window opens**. Instead the binary writes:
-  - `build-linux/output/tracking_data.csv`
-  - `build-linux/output/track_frame_*.jpg` (frame snapshots with bounding boxes overlaid)
-
-Open one of the JPGs from Windows Explorer to visually confirm the bounding
-boxes look right.
-
-Optional standalone diagnostic (does **not** install anything):
-
-```bash
-bash scripts/doctor.sh        # report only
-bash scripts/doctor.sh --auto # report + apt-install missing pieces
-```
-
-### 🪟 Windows 10 (PowerShell) — example session
+#### Step 1 — Open PowerShell at the repo root and run
 
 ```powershell
-git clone https://github.com/dibcode/open-watch.git
-cd open-watch
-
-# All-in-one: doctor -> (auto-install if needed) -> cmake -> build -> run
+cd C:\path\to\open-watch
 powershell -ExecutionPolicy Bypass -File scripts\run.ps1
 ```
 
-What you'll see:
-- Live progress lines while compiling (MSBuild).
-- A live OpenCV window opens with bounding boxes + persistent track IDs.
-- Press <kbd>Esc</kbd> to stop early, or let the video play to the end.
-- The CSV is written to `build-windows\Release\tracking_data.csv`.
+That's it. The script will:
 
-Optional standalone diagnostic (does **not** install anything):
+1. Run `scripts\doctor.ps1` to inspect your toolchain.
+2. If anything is missing, prompt: `Auto-install missing dependencies (vcpkg + OpenCV + Eigen) now? [y/N]`
+   - Type `y` → it bootstraps [vcpkg](https://github.com/microsoft/vcpkg) at
+     `C:\vcpkg` and runs:
+     - `vcpkg install opencv4[core,dnn,jpeg,png,ffmpeg]:x64-windows` (~15 - 30 min the first time)
+     - `vcpkg install eigen3:x64-windows` (~1 min)
+3. Create `build-windows\` at the repo root.
+4. Configure CMake with the VS 2022 generator + vcpkg toolchain file.
+5. Compile with MSBuild → `build-windows\Release\tracker_windows.exe`.
+6. Launch the tracker. **A live OpenCV window opens** showing your video
+   with bounding boxes + persistent track IDs. Press <kbd>Esc</kbd> to stop.
+7. Write `tracking_data.csv` to `build-windows\Release\`.
+
+#### Optional: doctor only (no install, no build)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\doctor.ps1        # report only
-powershell -ExecutionPolicy Bypass -File scripts\doctor.ps1 -Auto  # report + bootstrap vcpkg + vcpkg install
+powershell -ExecutionPolicy Bypass -File scripts\doctor.ps1 -Auto  # report + bootstrap vcpkg + install missing packages
 ```
 
-### Useful flags
+#### Useful flags for `run.ps1`
 
-| Flag (Linux) | Flag (Windows) | Effect |
-|---|---|---|
-| `--yes`        | `-Yes`        | Non-interactive: auto-confirm the install prompt |
-| `--build-only` | `-BuildOnly`  | Configure + compile, but don't launch the tracker |
-| `--clean`      | `-Clean`      | Wipe `build-linux/` or `build-windows/` before configuring |
-|                | `-VcpkgRoot <path>` | Use a vcpkg install at a custom location (default `C:\vcpkg`) |
+| Flag | Effect |
+|---|---|
+| `-Yes`              | Non-interactive: auto-confirm the install prompt |
+| `-BuildOnly`        | Configure + compile, but don't launch the tracker |
+| `-Clean`            | Wipe `build-windows\` before configuring |
+| `-VcpkgRoot <path>` | Use a vcpkg install at a custom location (default `C:\vcpkg`) |
 
 > First-time `vcpkg install opencv4[…]` typically takes 15 - 30 minutes. After
 > that, subsequent runs reuse the cache and are fast.
 
 ---
 
-## Manual build (no scripts)
+## Manual Windows build (without `run.ps1`)
 
-If you'd rather run the CMake commands yourself, these are the exact commands
-`scripts/run.sh` and `scripts/run.ps1` execute internally.
-
-### Manual — Linux / WSL Ubuntu 24.04
-
-```bash
-# 1. Install system dependencies (one-time)
-sudo apt update
-sudo apt install -y clang-18 cmake ninja-build pkg-config \
-                    libopencv-dev libeigen3-dev build-essential
-
-# 2. From the repo root, create + enter the Linux build folder
-mkdir -p build-linux && cd build-linux
-
-# 3. Configure
-cmake .. -G Ninja \
-         -DCMAKE_BUILD_TYPE=Release \
-         -DCMAKE_CXX_COMPILER=clang++ \
-         -DCMAKE_CXX_STANDARD=20
-
-# 4. Compile
-cmake --build . --config Release
-
-# 5. Run (from build-linux/)
-./person_detector_linux
-```
-
-### Manual — Windows 10 (MSVC + vcpkg)
+If you'd rather run the CMake commands yourself instead of using the helper
+script, here is what `scripts\run.ps1` does internally. The Linux instructions
+above are already the manual approach — there's nothing to "unwrap" there.
 
 ```powershell
 # 1. Install vcpkg + dependencies (one-time)
@@ -462,17 +475,15 @@ open-watch/
 │   ├── Object.{h,cpp}
 │   ├── Rect.{h,cpp}
 │   └── STrack.{h,cpp}
-├── scripts/
-│   ├── doctor.sh                    ← Diagnose the Linux/WSL toolchain (--auto installs)
+├── scripts/                         ← Windows-only helpers (Linux uses raw cmake commands)
 │   ├── doctor.ps1                   ← Diagnose the Windows toolchain (-Auto installs)
-│   ├── run.sh                       ← Linux/WSL: doctor + cmake + build + run
-│   └── run.ps1                      ← Windows:    doctor + cmake + build + run
+│   └── run.ps1                      ← Windows: doctor + cmake + build + run
 ├── videos/                          ← Test footage (folder + contents tracked by git)
 │   ├── README.md
 │   ├── .gitkeep
 │   └── video1.mp4                   ← default test clip the trackers look for
 ├── build-windows/                   ← Created by run.ps1 on first run (gitignored)
-├── build-linux/                     ← Created by run.sh  on first run (gitignored)
+├── build-linux/                     ← You create this with `mkdir` (gitignored)
 ├── CMakeLists.txt
 ├── CITATION.cff
 ├── CONTRIBUTING.md
@@ -484,8 +495,9 @@ open-watch/
 > **Should I commit `build-windows/` and `build-linux/`?** **No.** They
 > contain machine-specific compiled artifacts (object files, generated
 > Makefiles, vcpkg-resolved paths, etc.) that don't belong in version
-> control. They are listed in `.gitignore`. The install scripts recreate
-> them on every machine.
+> control. They are listed in `.gitignore`. On Linux you create
+> `build-linux/` with `mkdir`; on Windows `scripts\run.ps1` creates
+> `build-windows/` for you.
 
 ---
 
@@ -494,7 +506,7 @@ open-watch/
 ### ✅ Phase 1 — Perception foundation (this repo)
 - [x] Windows build with live video display + CSV
 - [x] Linux / WSL build with frame snapshots + CSV
-- [x] Two-script UX per OS (`doctor` + `run`) with auto-install fallback
+- [x] Reproducible builds: raw CMake commands on Linux (4 lines), `scripts\run.ps1` helper on Windows (auto-installs vcpkg + OpenCV + Eigen)
 - [x] Cross-platform CMake (`C++20`, MSVC + clang 18)
 
 ### 🔬 Phase 2 — Suspicious-activity detection

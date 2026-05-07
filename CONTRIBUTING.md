@@ -23,25 +23,30 @@ for real-world security applications.
 
 ## Get the project building locally
 
-You should have a working build before you start contributing. OpenWatch
-ships two scripts per OS:
+You should have a working build before you start contributing. The two
+toolchains are completely separate:
 
-| Script | Purpose |
-|---|---|
-| `scripts/doctor.sh` / `scripts/doctor.ps1` | Diagnose your toolchain. Pass `--auto` / `-Auto` to install missing pieces. |
-| `scripts/run.sh`    / `scripts/run.ps1`    | Doctor + CMake configure + build + run, in one shot. |
+**Linux / WSL Ubuntu 24.04** — raw CMake commands (no helper script):
 
 ```bash
-# Ubuntu 24.04 / WSL2
-bash scripts/run.sh
+sudo apt install -y clang-18 cmake ninja-build pkg-config \
+                    libopencv-dev libeigen3-dev build-essential
+cd build-linux
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++
+cmake --build . --config Release
+./person_detector_linux
+```
 
-# Windows 10 (PowerShell)
+**Windows 10 (PowerShell)** — helper script that wires up vcpkg + MSVC:
+
+```powershell
 powershell -ExecutionPolicy Bypass -File scripts\run.ps1
 ```
 
-If you need something the scripts don't cover (custom vcpkg location,
-non-default compiler, Docker image, etc.), the manual CMake commands are in
-the README under **Manual build (no scripts)**.
+The Windows script (`scripts\run.ps1`) calls `scripts\doctor.ps1` internally
+to inspect the toolchain, prompts before installing anything, and then runs
+the CMake commands. See the README's **Quick start** section for the full
+walkthrough on each OS.
 
 ---
 
@@ -89,7 +94,7 @@ Examples:
 git commit -m "feat: add polygon ROI for microbusiness loitering zones"
 git commit -m "fix: clamp negative bounding box coordinates before CSV write"
 git commit -m "docs: add WSL2 GPU passthrough setup guide"
-git commit -m "chore: bump clang requirement to 18 in install-linux.sh"
+git commit -m "chore: bump clang requirement to 18 in README"
 ```
 
 ### 5. Open a Pull Request
@@ -116,8 +121,10 @@ Before submitting, confirm:
       `.gitignore`
 - [ ] If behavior changed, the README's relevant section was updated
 - [ ] Commit messages follow the convention above
-- [ ] Install scripts (`scripts/install-*`) still succeed on a clean machine
-      if you touched dependencies
+- [ ] If you touched the Windows helper, `scripts\run.ps1` and
+      `scripts\doctor.ps1` still succeed on a clean Windows 10 machine
+- [ ] If you touched a Linux dependency, the raw CMake commands documented
+      in the README still work on a fresh Ubuntu 24.04
 
 ---
 
