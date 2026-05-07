@@ -11,7 +11,7 @@
 ![OpenCV](https://img.shields.io/badge/OpenCV-%E2%89%A5%204.5-5C3EE8.svg)
 ![Status: Phase 1](https://img.shields.io/badge/status-Phase%201%20%7C%20tracking%20%2B%20CSV-orange.svg)
 
-A collaboration between **[DibCode](https://dibcode.com)** and the
+A collaboration between **[Dibcode](https://dibcode.com)** and the
 **[Stevens Institute for Artificial Intelligence (SIAI)](https://www.stevens.edu/stevens-institute-for-artificial-intelligence)**
 at Stevens Institute of Technology.
 
@@ -24,7 +24,7 @@ at Stevens Institute of Technology.
 > **OpenWatch is an open-source person tracking and suspicious-activity
 > detection system built for AI research and real-world security challenges.
 > It is designed to track individuals and detect behavioral patterns such as
-> *loitering around microbusinesses*. A collaboration between DibCode and the
+> *loitering around microbusinesses*. A collaboration between Dibcode and the
 > Stevens Institute for Artificial Intelligence (SIAI).**
 
 OpenWatch is being developed in two phases:
@@ -105,7 +105,7 @@ across disciplines.
 > collaborations with industry, government, foundations and academic
 > partners."* — Stevens Institute for Artificial Intelligence
 
-This collaboration between **DibCode** (industry) and **Prof. Iounut** at
+This collaboration between **Dibcode** (industry) and **Prof. Iounut** at
 Stevens (academia) reflects exactly that cross-sector model.
 
 ---
@@ -567,7 +567,7 @@ research and commercial purposes with attribution.
 
 ## Authors and acknowledgements
 
-**Zandor Sanchez** — Founder, [DibCode](https://dibcode.com)
+**Zandor Sanchez** — Founder, [Dibcode](https://dibcode.com)
 Lead developer and industry collaborator.
 
 **Prof. Iounut** — Faculty, Stevens Institute of Technology
