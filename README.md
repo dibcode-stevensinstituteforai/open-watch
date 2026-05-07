@@ -202,20 +202,22 @@ OpenWatch builds with **two completely separate toolchains**:
 
 #### Step 0 — Open a Bash shell at the repo root
 
-If you're on **native Linux**, just `cd` into the repo:
+`cd` into the `open-watch` folder wherever you cloned it.
+
+**Native Linux:**
 
 ```bash
 cd /path/to/open-watch
 ```
 
-If you're on **WSL Ubuntu inside Windows**, your repo lives on the Windows
-filesystem. Reach it through `/mnt/c/...`. Example:
+**WSL Ubuntu inside Windows:** your Windows drives are mounted under
+`/mnt/`. Translate your Windows path by replacing `C:\` with `/mnt/c/` and
+the backslashes with forward slashes. For example, if you cloned the repo
+to `C:\Users\YourName\Documents\open-watch`, then in WSL you run:
 
 ```bash
-cd "/mnt/c/Users/Zandor/Desktop/HOYYU/open-watch"
+cd "/mnt/c/Users/YourName/Documents/open-watch"
 ```
-
-> Adjust the path to wherever you cloned the repo on your Windows side.
 
 #### Step 1 — Install the toolchain (one-time, on a fresh Ubuntu 24.04)
 
