@@ -1,0 +1,71 @@
+# =============================================================================
+# OpenWatch - Git ignore rules
+# =============================================================================
+
+# --- Build directories (created by scripts/run.{sh,ps1}) --------------------
+build-windows/
+build-linux/
+build/
+out/
+cmake-build-*/
+
+# --- Compiled binaries ------------------------------------------------------
+*.exe
+*.out
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+*.pdb
+*.ilk
+*.exp
+
+# --- CMake generated files --------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# --- Runtime artifacts ------------------------------------------------------
+# Ignore CSVs and image snapshots produced at runtime, but keep videos
+# committed (test footage is small enough to live in git).
+output/
+*.csv
+*.jpg
+*.jpeg
+*.png
+*.bmp
+
+# --- Test inputs ------------------------------------------------------------
+# videos/ is fully tracked. Drop test footage (e.g. video1.mp4) in there
+# and it will be committed alongside the source.
+
+# --- vcpkg local install dir (Windows doctor.ps1 may bootstrap one) ---------
+vcpkg/
+
+# --- IDE / editor -----------------------------------------------------------
+.vscode/
+.idea/
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+*.vcxproj.user
+*.swp
+*.swo
+
+# --- OS junk ----------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs -------------------------------------------------------------------
+*.log

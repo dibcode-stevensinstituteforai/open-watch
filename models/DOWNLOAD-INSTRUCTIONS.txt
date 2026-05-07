@@ -1,0 +1,29 @@
+MobileNet-SSD Model Download Instructions
+==========================================
+
+The model files are hosted on Google Drive.
+
+Download Links:
+--------------
+
+1. deploy.prototxt (Network structure):
+   https://drive.google.com/file/d/0B3gersZ2cHIxRm5PMWRoTkdHdHc/view?usp=sharing&resourcekey=0-1Lpfs4EvGDeCQz12AF64hQ
+
+2. mobilenet_iter_73000.caffemodel (Trained weights):  
+   https://drive.google.com/file/d/0B3gersZ2cHIxVFI1Rjd5aDgwOG8/view?usp=sharing&resourcekey=0-06X5rxeA-Wg6pg3UIeF5og
+
+After Download:
+--------------
+
+1. Rename files:
+   - deploy.prototxt → MobileNetSSD_deploy.prototxt
+   - mobilenet_iter_73000.caffemodel → MobileNetSSD_deploy.caffemodel
+
+2. Place both files in this models/ folder
+
+3. Verify:
+   models/
+     ├── MobileNetSSD_deploy.prototxt      (~29 KB)
+     └── MobileNetSSD_deploy.caffemodel    (~23 MB)
+
+Then you can build and run the person detector!

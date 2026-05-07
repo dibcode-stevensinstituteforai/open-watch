@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it as below."
+type: software
+title: "OpenWatch: Open-Source Person Tracking and Suspicious-Activity Detection for Real-World Security"
+authors:
+  - family-names: Sanchez
+    given-names: Zandor
+    affiliation: DibCode
+version: 1.0.0
+date-released: 2025-01-01
+url: "https://github.com/dibcode/open-watch"
+repository-code: "https://github.com/dibcode/open-watch"
+license: MIT
+abstract: >
+  OpenWatch is an open-source person tracking and suspicious-activity
+  detection system designed for AI research and real-world security
+  challenges, with a particular focus on detecting behavioral patterns such
+  as loitering around microbusinesses. The system combines MobileNet-SSD for
+  person detection via OpenCV's DNN module with ByteTrack for persistent
+  multi-object ID assignment, and exports structured CSV data
+  (bounding box, frame timestamp, track ID) that downstream behavior
+  analyzers can consume. OpenWatch is developed as a collaboration between
+  DibCode and the Stevens Institute for Artificial Intelligence (SIAI) at
+  Stevens Institute of Technology, and targets cross-platform deployment
+  (Windows with MSVC + vcpkg, and Ubuntu 24.04 with clang++ 18 + Ninja, both
+  using C++20).
+keywords:
+  - computer vision
+  - person tracking
+  - multi-object tracking
+  - suspicious activity detection
+  - loitering detection
+  - behavior analysis
+  - surveillance
+  - microbusiness security
+  - ByteTrack
+  - MobileNet-SSD
+  - OpenCV
+  - artificial intelligence
+  - open source
+references:
+  - type: software
+    title: "ByteTrack: Multi-Object Tracking by Associating Every Detection Box"
+    url: "https://github.com/ifzhang/ByteTrack"
+  - type: software
+    title: "OpenCV"
+    url: "https://opencv.org/"
+  - type: software
+    title: "MobileNet-SSD (Caffe)"
+    url: "https://github.com/chuanqi305/MobileNet-SSD"
