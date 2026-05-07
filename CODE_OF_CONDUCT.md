@@ -2,7 +2,7 @@
 
 ## Our pledge
 
-OpenWatch is a collaboration between industry (**DibCode**) and academia
+OpenWatch is a collaboration between industry (**Dibcode**) and academia
 (**Stevens Institute for Artificial Intelligence**). Because the project's
 goal — open person tracking and suspicious-activity detection for
 real-world security challenges — touches on sensitive topics (surveillance,

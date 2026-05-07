@@ -5,7 +5,7 @@ title: "OpenWatch: Open-Source Person Tracking and Suspicious-Activity Detection
 authors:
   - family-names: Sanchez
     given-names: Zandor
-    affiliation: DibCode
+    affiliation: Dibcode
 version: 1.0.0
 date-released: 2025-01-01
 url: "https://github.com/dibcode/open-watch"
@@ -20,7 +20,7 @@ abstract: >
   multi-object ID assignment, and exports structured CSV data
   (bounding box, frame timestamp, track ID) that downstream behavior
   analyzers can consume. OpenWatch is developed as a collaboration between
-  DibCode and the Stevens Institute for Artificial Intelligence (SIAI) at
+  Dibcode and the Stevens Institute for Artificial Intelligence (SIAI) at
   Stevens Institute of Technology, and targets cross-platform deployment
   (Windows with MSVC + vcpkg, and Ubuntu 24.04 with clang++ 18 + Ninja, both
   using C++20).

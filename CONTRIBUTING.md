@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to **OpenWatch** — an open-source
 person tracking and suspicious-activity detection system, and a collaboration
-between **DibCode** and the **Stevens Institute for Artificial Intelligence (SIAI)**.
+between **Dibcode** and the **Stevens Institute for Artificial Intelligence (SIAI)**.
 
 We welcome contributions from researchers, students, engineers, and anyone
 curious about computer vision, multi-object tracking, and behavior analysis
