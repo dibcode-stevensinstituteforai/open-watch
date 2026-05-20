@@ -4,19 +4,25 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
 #include <vector>
+#include <deque>           // Added for the temporal rolling window
+#include <unordered_map>   // Added to track node graphs by ID
+
 #include "bytetrack/BYTETracker.h"
 #include "bytetrack/Object.h"
+
+// --- Topological Algorithm State & Parameters ---
+std::unordered_map<int, std::deque<cv::Point>> track_history;
+
+const size_t MIN_NODES = 49;          // Must have at least 49 rows/nodes
+const size_t MAX_HISTORY = 150;       // Max nodes to keep in memory 
+const int LOITER_RADIUS = 60;         // Pixel radius that defines a "knot"
+// ------------------------------------------------
 
 int main() {
     std::cout << "=== Person Tracker - Windows ===" << std::endl;
     std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
     // --- 1. Load MobileNet-SSD model ---
-    // Model files are committed at <repo>/models/. The Release binary lives
-    // in <repo>/build-windows/Release/, so "../../models/..." is the
-    // canonical relative path. The other entries are convenience fallbacks
-    // for running from the repo root or from build-windows/ directly. All
-    // paths are repo-relative so the program works on any machine.
     std::vector<std::string> prototxtPaths = {
         "../../models/MobileNetSSD_deploy.prototxt",
         "../models/MobileNetSSD_deploy.prototxt",
@@ -50,11 +56,6 @@ int main() {
     net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
     // --- 2. Open video ---
-    // Default test video is committed at <repo>/videos/video1.mp4.
-    // The Release binary lives in <repo>/build-windows/Release/, so
-    // "../../videos/..." is the canonical relative path. The other entries
-    // are convenience fallbacks for running from the repo root or from
-    // build-windows/ directly (single-config generators).
     std::vector<std::string> videoPaths = {
         "../../videos/video1.mp4",
         "../videos/video1.mp4",
@@ -84,8 +85,6 @@ int main() {
     std::cout << "Press ESC to exit" << std::endl;
 
     // --- 3. Init ByteTrack ---
-    // BYTETracker(fps, buffer_size)
-    // buffer_size = how many frames to keep a lost track alive
     byte_track::BYTETracker tracker(fps, 60);
 
     // --- 4. Detection config ---
@@ -103,8 +102,6 @@ int main() {
     cv::Mat frame;
     int frameNum = 0;
 
-
-
     // --- Open CSV File ---
     std::ofstream csvFile("tracking_data.csv");
     if (!csvFile.is_open()) {
@@ -113,9 +110,6 @@ int main() {
     }
     // Write the header row
     csvFile << "x,y,width,height,time_in_seconds,track_id\n";
-
-
-
 
     while (cap.read(frame)) {
         if (frame.empty()) break;
@@ -163,12 +157,8 @@ int main() {
         // --- 8. Update tracker ---
         auto tracked = tracker.update(objects);
 
-
-        
         // Calculate current time in seconds
         double time_in_seconds = static_cast<double>(frameNum) / fps;
-
-
 
         // --- 9. Draw tracked persons ---
         for (const auto& track : tracked) {
@@ -186,15 +176,55 @@ int main() {
             x2 = std::max(0, std::min(x2, width  - 1));
             y2 = std::max(0, std::min(y2, height - 1));
 
-            cv::Scalar color = colors[id % colors.size()];
+            // Calculate width and height from your existing x1, y1, x2, y2 variables
+            int w = x2 - x1;
+            int h = y2 - y1;
+
+            // --- REAL-TIME TOPOLOGICAL LOITERING ALGORITHM ---
+            int cx = x1 + w / 2;
+            int cy = y1 + h / 2;
+            cv::Point current_pt(cx, cy);
+            
+            track_history[id].push_back(current_pt);
+            
+            if (track_history[id].size() > MAX_HISTORY) {
+                track_history[id].pop_front();
+            }
+
+            bool is_loitering = false;
+
+            if (track_history[id].size() >= MIN_NODES) {
+                int max_dist_sq = 0;
+                
+                for (const auto& pt : track_history[id]) {
+                    int dx = current_pt.x - pt.x;
+                    int dy = current_pt.y - pt.y;
+                    int dist_sq = dx * dx + dy * dy;
+                    if (dist_sq > max_dist_sq) {
+                        max_dist_sq = dist_sq;
+                    }
+                }
+                
+                if (max_dist_sq < (LOITER_RADIUS * LOITER_RADIUS)) {
+                    is_loitering = true;
+                }
+            }
+            // ---------------------------------------------------
+
+            cv::Scalar color = is_loitering ? cv::Scalar(0, 0, 255) : colors[id % colors.size()];
+            int thickness = is_loitering ? 4 : 2;
 
             // Bounding box
             cv::rectangle(frame,
                 cv::Point(x1, y1), cv::Point(x2, y2),
-                color, 2);
+                color, thickness);
 
             // Label
             std::string label = "ID:" + std::to_string(id);
+            if (is_loitering) {
+                label += " [LOITERING]";
+            }
+
             int baseline = 0;
             cv::Size labelSize = cv::getTextSize(
                 label, cv::FONT_HERSHEY_SIMPLEX, 0.6, 2, &baseline);
@@ -205,12 +235,7 @@ int main() {
             cv::putText(frame, label, cv::Point(x1, y1 - 4),
                 cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0, 0), 2);
 
-            
             // --- SAVE TO CSV ---
-            // Calculate width and height from your existing x1, y1, x2, y2 variables
-            int w = x2 - x1;
-            int h = y2 - y1;
-    
             // Write the data row
             csvFile << x1 << "," << y1 << "," << w << "," << h << "," << time_in_seconds << "," << id << "\n";
         }

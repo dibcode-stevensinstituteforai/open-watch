@@ -5,18 +5,24 @@
 #include <opencv2/dnn.hpp>
 #include <vector>
 #include <filesystem>
+#include <deque>           // Added for the temporal rolling window
+#include <unordered_map>   // Added to track node graphs by ID
+
 #include "bytetrack/BYTETracker.h"
 #include "bytetrack/Object.h"
+
+// --- Topological Algorithm State & Parameters ---
+std::unordered_map<int, std::deque<cv::Point>> track_history;
+
+const size_t MIN_NODES = 49;          // Must have at least 49 rows/nodes
+const size_t MAX_HISTORY = 150;       // Max nodes to keep in memory 
+const int LOITER_RADIUS = 60;         // Pixel radius that defines a "knot"
+// ------------------------------------------------
 
 int main() {
     std::cout << "=== Person Tracker - Linux/WSL ===" << std::endl;
 
     // --- 1. Load Model with Path Searching ---
-    // Model files are committed at <repo>/models/. The binary lives in
-    // <repo>/build-linux/, so "../models/..." is the canonical relative path.
-    // The other entries are convenience fallbacks for running from the repo
-    // root or from a deeper build subfolder. All paths are repo-relative so
-    // the program works on any machine, regardless of OS or username.
     std::vector<std::string> prototxtPaths = {
         "../models/MobileNetSSD_deploy.prototxt",
         "models/MobileNetSSD_deploy.prototxt",
@@ -45,10 +51,6 @@ int main() {
     net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
     // --- 2. Open Video ---
-    // Default test video is committed at <repo>/videos/video1.mp4.
-    // The binary lives in <repo>/build-linux/, so "../videos/..." is the
-    // canonical relative path. The other entries are convenience fallbacks
-    // for running from the repo root or from a deeper build subfolder.
     std::vector<std::string> videoPaths = {
         "../videos/video1.mp4",
         "videos/video1.mp4",
@@ -77,8 +79,6 @@ int main() {
     int frameNum = 0;
     const int PERSON_CLASS = 15;
 
-
-
     // --- 2. OPEN CSV FILE ---
     // Saving it in the "output" folder alongside your images
     std::ofstream csvFile("output/tracking_data.csv"); 
@@ -88,10 +88,6 @@ int main() {
     }
     // Write the header row
     csvFile << "x,y,width,height,time_in_seconds,track_id\n";
-
-
-
-
 
     while (cap.read(frame)) {
         if (frame.empty()) break;
@@ -124,42 +120,66 @@ int main() {
         // --- 6. Update Tracker ---
         auto tracked = tracker.update(objects);
 
-
-
         // Calculate current time in seconds for the whole frame
         double time_in_seconds = static_cast<double>(frameNum) / fps;
-
-
-
 
         // --- 7. Draw and Save ---
         for (const auto& t : tracked) {
             auto r = t->getRect();
             int id = t->getTrackId();
-            cv::Scalar color = colors[id % colors.size()];
             
-            /*
-            cv::rectangle(frame, cv::Rect(r.x(), r.y(), r.width(), r.height()), color, 2);
-            cv::putText(frame, "ID:" + std::to_string(id), cv::Point(r.x(), r.y() - 5), 
-                        cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-            */
-
             // 7.1. DECLARE AND EXTRACT VARIABLES FIRST
             int x1 = (int)r.x();
             int y1 = (int)r.y();
             int w  = (int)r.width();
             int h  = (int)r.height();
 
+            // --- REAL-TIME TOPOLOGICAL LOITERING ALGORITHM ---
+            int cx = x1 + w / 2;
+            int cy = y1 + h / 2;
+            cv::Point current_pt(cx, cy);
+            
+            track_history[id].push_back(current_pt);
+            
+            if (track_history[id].size() > MAX_HISTORY) {
+                track_history[id].pop_front();
+            }
+
+            bool is_loitering = false;
+
+            if (track_history[id].size() >= MIN_NODES) {
+                int max_dist_sq = 0;
+                
+                for (const auto& pt : track_history[id]) {
+                    int dx = current_pt.x - pt.x;
+                    int dy = current_pt.y - pt.y;
+                    int dist_sq = dx * dx + dy * dy;
+                    if (dist_sq > max_dist_sq) {
+                        max_dist_sq = dist_sq;
+                    }
+                }
+                
+                if (max_dist_sq < (LOITER_RADIUS * LOITER_RADIUS)) {
+                    is_loitering = true;
+                }
+            }
+            // ---------------------------------------------------
+
+            // Adjust color and text based on algorithm logic
+            cv::Scalar color = is_loitering ? cv::Scalar(0, 0, 255) : colors[id % colors.size()];
+            int thickness = is_loitering ? 4 : 2;
+            std::string label = "ID:" + std::to_string(id);
+            if (is_loitering) {
+                label += " [LOITERING]";
+            }
+
             // 7.2. DRAW BOUNDING BOXES (using the variables)
-            cv::rectangle(frame, cv::Rect(x1, y1, w, h), color, 2);
-            cv::putText(frame, "ID:" + std::to_string(id), cv::Point(x1, y1 - 5), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+            cv::rectangle(frame, cv::Rect(x1, y1, w, h), color, thickness);
+            cv::putText(frame, label, cv::Point(x1, y1 - 5), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
             
             // --- 7.3. WRITE TO CSV ---
             csvFile << x1 << "," << y1 << "," << w << "," << h << "," << time_in_seconds << "," << id << "\n";
         }
-
-
-
 
         // Save frames (every 30th or whenever someone is tracked)
         if (frameNum % 30 == 0 || !tracked.empty()) {
